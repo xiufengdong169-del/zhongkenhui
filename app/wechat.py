@@ -285,6 +285,7 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
 
     # ---- 文本消息 ----
     if msg_type == "text":
+        logger.info("收到文本消息 from=%s content=%s", from_user, content)
         if content == SET_ADMIN_KEYWORD:
             db.set_admin(from_user)
             logger.info("设置管理员: %s", from_user)
