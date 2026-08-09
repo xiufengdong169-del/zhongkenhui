@@ -33,5 +33,8 @@ class Settings:
     PUBLIC_BASE: str = os.getenv("PUBLIC_BASE", "http://wx.zk550.cn")
     LOG_FILE: str = os.getenv("LOG_FILE", "/var/log/zhongkenhui/app.log")
 
+    # OAuth 网页授权（需在公众平台配置「网页授权域名」后才能开启）
+    OAUTH_ENABLED: bool = os.getenv("OAUTH_ENABLED", "0") == "1"
+
 
 settings = Settings()

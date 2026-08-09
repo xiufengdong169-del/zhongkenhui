@@ -88,6 +88,9 @@ def _oauth_redirect(request: Request, scope: str = "snsapi_base") -> RedirectRes
 
 def _need_oauth(request: Request) -> bool:
     """判断是否需要 OAuth 重定向（微信内且未授权且未跳过）"""
+    # OAuth 未开启时直接返回 False（需在公众平台配置网页授权域名后开启）
+    if not settings.OAUTH_ENABLED:
+        return False
     if not _is_wechat(request):
         return False
     if _read_openid(request):
@@ -113,11 +116,12 @@ def health():
 
 
 @app.get("/wx/debug")
-def wx_debug():
+def wx_debug(openid: str = Query("")):
     """诊断端点：检查配置、access_token、菜单、用户信息"""
     import time as _time
     info = {
         "PUBLIC_BASE": settings.PUBLIC_BASE,
+        "OAUTH_ENABLED": settings.OAUTH_ENABLED,
         "WX_APPID": settings.WX_APPID,
         "WX_APPSECRET_set": bool(settings.WX_APPSECRET),
         "WX_TOKEN": settings.WX_TOKEN,
@@ -133,6 +137,11 @@ def wx_debug():
     # 测试菜单
     menu = wechat.get_menu_info()
     info["menu"] = menu
+
+    # 如果传了 openid，测试获取用户信息
+    if openid:
+        user_info = wechat.get_user_info(openid)
+        info["user_info_test"] = user_info
 
     # OAuth URL 示例
     oauth_url = wechat.build_oauth_url(

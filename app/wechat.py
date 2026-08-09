@@ -189,6 +189,15 @@ def _format_user_email(openid: str, user_info: dict, now: str) -> tuple:
         province = user_info.get("province", "")
         country = user_info.get("country", "")
         location = ", ".join(filter(None, [country, province, city])) or "未知"
+        subscribe_time = user_info.get("subscribe_time", "")
+        if subscribe_time:
+            try:
+                subscribe_time = datetime.fromtimestamp(int(subscribe_time)).strftime("%Y-%m-%d %H:%M:%S")
+            except (ValueError, OSError):
+                pass
+        else:
+            subscribe_time = now
+        unionid = user_info.get("unionid", "")
 
         email_body = (
             f"OpenID: {openid}\n"
@@ -196,15 +205,19 @@ def _format_user_email(openid: str, user_info: dict, now: str) -> tuple:
             f"性别: {sex_str}\n"
             f"地区: {location}\n"
             f"头像: {headimgurl}\n"
-            f"关注时间: {now}\n\n"
-            f"请登录微信公众平台查看详情。"
+            f"关注时间: {subscribe_time}\n"
         )
+        if unionid:
+            email_body += f"UnionID: {unionid}\n"
+        email_body += f"\n请登录微信公众平台查看详情。"
         subject = f"新用户关注 - {nickname}"
     else:
         email_body = (
             f"OpenID: {openid}\n"
             f"关注时间: {now}\n\n"
-            f"未能获取用户详细信息。"
+            f"未能获取用户详细信息。\n"
+            f"可能原因：用户隐私设置、API 调用失败或用户未关注。\n"
+            f"请登录微信公众平台查看详情。"
         )
         subject = "新用户关注"
 
