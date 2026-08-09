@@ -122,6 +122,18 @@ def _reply_text(to_user: str, from_user: str, content: str) -> str:
     )
 
 
+def _reply_transfer_cs(to_user: str, from_user: str) -> str:
+    """将用户转入多客服系统"""
+    return (
+        "<xml>"
+        f"<ToUserName><![CDATA[{to_user}]]></ToUserName>"
+        f"<FromUserName><![CDATA[{from_user}]]></FromUserName>"
+        f"<CreateTime>{int(time.time())}</CreateTime>"
+        "<MsgType><![CDATA[transfer_customer_service]]></MsgType>"
+        "</xml>"
+    )
+
+
 # ==================== OAuth 2.0 网页授权 ====================
 
 
@@ -350,6 +362,13 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
 
             return _reply_text(from_user, to_user, WELCOME_TEXT)
 
+        if event == "CLICK":
+            event_key = _get("EventKey")
+            if event_key == "CONTACT_CS":
+                logger.info("用户点击联系客服: %s", from_user)
+                return _reply_transfer_cs(from_user, to_user)
+            return ""
+
         if event == "unsubscribe":
             logger.info("用户取消关注: %s", from_user)
 
@@ -400,6 +419,11 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
             db.set_admin(from_user)
             logger.info("设置管理员: %s", from_user)
             return _reply_text(from_user, to_user, "管理员设置成功！您将收到关注/取消关注通知。")
+
+        # "客服"关键词触发转人工客服
+        if "客服" in content:
+            logger.info("用户请求转人工客服: %s", from_user)
+            return _reply_transfer_cs(from_user, to_user)
 
         # 邮件通知
         background_tasks.add_task(
