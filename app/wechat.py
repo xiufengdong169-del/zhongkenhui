@@ -366,7 +366,10 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
             event_key = _get("EventKey")
             if event_key == "CONTACT_CS":
                 logger.info("用户点击联系客服: %s", from_user)
-                return _reply_transfer_cs(from_user, to_user)
+                return _reply_text(
+                    from_user, to_user,
+                    "请直接发送消息描述您的问题，客服人员将尽快回复您。"
+                )
             return ""
 
         if event == "unsubscribe":
@@ -420,11 +423,6 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
             logger.info("设置管理员: %s", from_user)
             return _reply_text(from_user, to_user, "管理员设置成功！您将收到关注/取消关注通知。")
 
-        # "客服"关键词触发转人工客服
-        if "客服" in content:
-            logger.info("用户请求转人工客服: %s", from_user)
-            return _reply_transfer_cs(from_user, to_user)
-
         # 邮件通知
         background_tasks.add_task(
             send_notification,
@@ -440,7 +438,7 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
             "keyword1": {"value": display_name},
             "keyword2": {"value": now},
             "keyword3": {"value": content[:50] if len(content) > 50 else content},
-            "remark": {"value": "\n请登录公众号后台回复用户。"},
+            "remark": {"value": "\n用户已转入客服系统。"},
         }
         background_tasks.add_task(
             send_template_message,
@@ -448,6 +446,8 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
             tmpl_data,
         )
 
-        return _reply_text(from_user, to_user, DEFAULT_REPLY)
+        # 转入人工客服
+        logger.info("用户消息转入客服: %s", from_user)
+        return _reply_transfer_cs(from_user, to_user)
 
     return ""
