@@ -20,10 +20,10 @@ MENU = {
         {
             "name": "关于众肯",
             "sub_button": [
-                {"type": "click", "name": "联系客服", "key": "CONTACT_CS"},
                 {"type": "view", "name": "平台介绍", "url": f"{BASE}/about"},
                 {"type": "view", "name": "加入众肯", "url": f"{BASE}/register"},
                 {"type": "view", "name": "注册惊喜", "url": f"{BASE}/surprise"},
+                {"type": "click", "name": "联系客服", "key": "CONTACT_CS"},
             ],
         },
         {
