@@ -52,6 +52,58 @@ def get_access_token() -> str:
         return _token_cache.get("token", "")
 
 
+# ==================== 模板消息 ====================
+
+
+def send_template_message(template_id: str, data: dict, touser: str = "",
+                          url: str = "", miniprogram: dict = None) -> bool:
+    """给指定用户发送模板消息
+
+    参数:
+        template_id: 模板 ID
+        data: 模板数据，格式如 {"first": {"value": "xxx"}, "keyword1": {"value": "yyy"}, ...}
+        touser: 接收者 OpenID（不传则发给管理员）
+        url: 点击消息跳转的 URL（可选）
+        miniprogram: 小程序跳转（可选）
+    """
+    if not template_id:
+        logger.info("模板消息未配置 template_id，跳过")
+        return False
+
+    token = get_access_token()
+    if not token:
+        logger.error("模板消息发送失败: access_token 为空")
+        return False
+
+    target = touser or settings.WX_ADMIN_OPENID
+    if not target:
+        logger.error("模板消息发送失败: 目标用户 OpenID 为空")
+        return False
+
+    body = {
+        "touser": target,
+        "template_id": template_id,
+        "data": data,
+    }
+    if url:
+        body["url"] = url
+    if miniprogram:
+        body["miniprogram"] = miniprogram
+
+    api_url = f"https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={token}"
+    try:
+        resp = httpx.post(api_url, json=body, timeout=10).json()
+        if resp.get("errcode") == 0:
+            logger.info("模板消息发送成功 to=%s", target[:8])
+            return True
+        else:
+            logger.warning("模板消息发送失败: %s", resp)
+            return False
+    except Exception as e:
+        logger.error("模板消息发送异常: %s", e)
+        return False
+
+
 def check_signature(signature: str, timestamp: str, nonce: str) -> bool:
     items = sorted([settings.WX_TOKEN, timestamp or "", nonce or ""])
     sha = hashlib.sha1("".join(items).encode("utf-8")).hexdigest()
@@ -178,8 +230,10 @@ def get_menu_info() -> dict:
 
 
 def _format_user_email(openid: str, user_info: dict, now: str) -> tuple:
-    """根据用户信息构建邮件主题和正文"""
-    nickname = user_info.get("nickname")
+    """根据用户信息构建邮件主题和正文（优先从数据库画像获取昵称）"""
+    # 优先从数据库画像获取（OAuth 保存的）
+    profile = db.get_user_profile(openid)
+    nickname = profile.get("nickname") or user_info.get("nickname")
 
     if nickname:
         headimgurl = user_info.get("headimgurl", "")
@@ -255,31 +309,87 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
         if event == "subscribe":
             logger.info("新用户关注: %s", from_user)
             user_info = get_user_info(from_user)
+
+            # 保存用户画像到数据库
+            if user_info:
+                db.save_user_profile(
+                    openid=from_user,
+                    nickname=user_info.get("nickname", ""),
+                    headimgurl=user_info.get("headimgurl", ""),
+                    sex=user_info.get("sex", 0),
+                    province=user_info.get("province", ""),
+                    city=user_info.get("city", ""),
+                    country=user_info.get("country", ""),
+                    subscribe=1,
+                    subscribe_time=user_info.get("subscribe_time", 0),
+                )
+
+            # 邮件通知
             subject, email_body = _format_user_email(from_user, user_info, now)
             background_tasks.add_task(
                 send_notification,
                 f"【众肯会】{subject}",
                 email_body,
             )
+
+            # 模板消息通知管理员
+            profile = db.get_user_profile(from_user)
+            display_name = profile.get("nickname") or user_info.get("nickname") or "未知用户"
+            tmpl_data = {
+                "first": {"value": "有新用户关注了众肯会！\n"},
+                "keyword1": {"value": display_name},
+                "keyword2": {"value": now},
+                "keyword3": {"value": from_user},
+                "remark": {"value": "\n请及时跟进用户需求。"},
+            }
+            background_tasks.add_task(
+                send_template_message,
+                settings.WX_TEMPLATE_ID,
+                tmpl_data,
+            )
+
             return _reply_text(from_user, to_user, WELCOME_TEXT)
 
         if event == "unsubscribe":
             logger.info("用户取消关注: %s", from_user)
-            user_info = get_user_info(from_user)
-            nickname = user_info.get("nickname")
+
+            # 更新画像订阅状态
+            db.save_user_profile(openid=from_user, nickname="", headimgurl="", subscribe=0)
+
+            # 优先从数据库画像获取昵称
+            profile = db.get_user_profile(from_user)
+            nickname = profile.get("nickname")
 
             if nickname:
                 subject = f"用户取消关注 - {nickname}"
                 body = f"OpenID: {from_user}\n昵称: {nickname}\n取消时间: {now}"
+                display_name = nickname
             else:
                 subject = "用户取消关注"
                 body = f"OpenID: {from_user}\n取消时间: {now}"
+                display_name = "未知用户"
 
+            # 邮件通知
             background_tasks.add_task(
                 send_notification,
                 f"【众肯会】{subject}",
                 body,
             )
+
+            # 模板消息通知管理员
+            tmpl_data = {
+                "first": {"value": "有用户取消关注了众肯会\n"},
+                "keyword1": {"value": display_name},
+                "keyword2": {"value": now},
+                "keyword3": {"value": from_user},
+                "remark": {"value": "\n可以尝试通过客服消息重新触达用户。"},
+            }
+            background_tasks.add_task(
+                send_template_message,
+                settings.WX_TEMPLATE_ID,
+                tmpl_data,
+            )
+
             return ""
         return ""
 
@@ -291,11 +401,29 @@ def handle_message(xml_body: bytes, background_tasks) -> str:
             logger.info("设置管理员: %s", from_user)
             return _reply_text(from_user, to_user, "管理员设置成功！您将收到关注/取消关注通知。")
 
+        # 邮件通知
         background_tasks.add_task(
             send_notification,
             "公众号收到新留言",
             f"OpenID: {from_user}\n留言内容: {content}\n时间: {now}",
         )
+
+        # 模板消息通知管理员
+        profile = db.get_user_profile(from_user)
+        display_name = profile.get("nickname") or from_user[:10]
+        tmpl_data = {
+            "first": {"value": "公众号收到新留言\n"},
+            "keyword1": {"value": display_name},
+            "keyword2": {"value": now},
+            "keyword3": {"value": content[:50] if len(content) > 50 else content},
+            "remark": {"value": "\n请登录公众号后台回复用户。"},
+        }
+        background_tasks.add_task(
+            send_template_message,
+            settings.WX_TEMPLATE_ID,
+            tmpl_data,
+        )
+
         return _reply_text(from_user, to_user, DEFAULT_REPLY)
 
     return ""

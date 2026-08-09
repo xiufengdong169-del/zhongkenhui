@@ -96,6 +96,20 @@ DDL = [
         KEY idx_createtime (createtime)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     """,
+    """
+    CREATE TABLE IF NOT EXISTS user_profile (
+        openid VARCHAR(100) NOT NULL PRIMARY KEY,
+        nickname VARCHAR(100) NOT NULL DEFAULT '',
+        headimgurl VARCHAR(500) NOT NULL DEFAULT '',
+        sex TINYINT NOT NULL DEFAULT 0,
+        province VARCHAR(50) NOT NULL DEFAULT '',
+        city VARCHAR(50) NOT NULL DEFAULT '',
+        country VARCHAR(50) NOT NULL DEFAULT '',
+        subscribe TINYINT NOT NULL DEFAULT 0,
+        subscribe_time INT NOT NULL DEFAULT 0,
+        updatetime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """,
 ]
 
 
@@ -183,3 +197,46 @@ def log_message(openid: str, msgtype: str, event: str, content: str):
             )
     except Exception:
         logger.exception("消息日志写入失败")
+
+
+# ---------- 用户画像（OAuth / 关注事件自动保存） ----------
+def save_user_profile(openid: str, nickname: str, headimgurl: str,
+                      sex: int = 0, province: str = "", city: str = "",
+                      country: str = "", subscribe: int = 0, subscribe_time: int = 0):
+    """保存或更新用户画像"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO user_profile (openid, nickname, headimgurl, sex, province, city, country, subscribe, subscribe_time) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                "ON DUPLICATE KEY UPDATE "
+                "nickname=IF(VALUES(nickname)!='',VALUES(nickname),nickname), "
+                "headimgurl=IF(VALUES(headimgurl)!='',VALUES(headimgurl),headimgurl), "
+                "sex=IF(VALUES(sex)!=0,VALUES(sex),sex), "
+                "province=IF(VALUES(province)!='',VALUES(province),province), "
+                "city=IF(VALUES(city)!='',VALUES(city),city), "
+                "country=IF(VALUES(country)!='',VALUES(country),country), "
+                "subscribe=VALUES(subscribe), "
+                "subscribe_time=VALUES(subscribe_time)",
+                (openid, nickname, headimgurl, sex, province, city, country, subscribe, subscribe_time),
+            )
+    except Exception:
+        logger.exception("用户画像保存失败")
+
+
+def get_user_profile(openid: str) -> dict:
+    """查询用户画像（如昵称、头像等）"""
+    if not openid:
+        return {}
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT nickname, headimgurl, sex, province, city, country, subscribe, subscribe_time "
+                "FROM user_profile WHERE openid=%s LIMIT 1",
+                (openid,),
+            )
+            row = cur.fetchone()
+            return row or {}
+    except Exception:
+        logger.exception("用户画像查询失败")
+        return {}

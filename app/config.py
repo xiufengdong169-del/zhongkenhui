@@ -29,6 +29,10 @@ class Settings:
     ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
     MAIL_ENABLED: bool = os.getenv("MAIL_ENABLED", "1") == "1"
 
+    # 模板消息（认证服务号可用，用于给管理员推送关注/取关/留言通知）
+    WX_ADMIN_OPENID: str = os.getenv("WX_ADMIN_OPENID", "oXoI-uGVf1nVFAu5Ad3dsuofYTwY")
+    WX_TEMPLATE_ID: str = os.getenv("WX_TEMPLATE_ID", "")
+
     # 站点
     PUBLIC_BASE: str = os.getenv("PUBLIC_BASE", "http://wx.zk550.cn")
     LOG_FILE: str = os.getenv("LOG_FILE", "/var/log/zhongkenhui/app.log")

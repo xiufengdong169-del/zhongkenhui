@@ -213,6 +213,23 @@ def wx_oauth_callback(
 
     logger.info("OAuth 授权成功，openid: %s...", openid[:8])
 
+    # 如果是 snsapi_userinfo 授权，获取并保存昵称头像
+    oauth_access_token = result.get("access_token", "")
+    scope_auth = result.get("scope", "")
+    if oauth_access_token and "snsapi_userinfo" in scope_auth:
+        userinfo = wechat.get_oauth_userinfo(oauth_access_token, openid)
+        if userinfo:
+            db.save_user_profile(
+                openid=openid,
+                nickname=userinfo.get("nickname", ""),
+                headimgurl=userinfo.get("headimgurl", ""),
+                sex=userinfo.get("sex", 0),
+                province=userinfo.get("province", ""),
+                city=userinfo.get("city", ""),
+                country=userinfo.get("country", ""),
+            )
+            logger.info("OAuth 用户画像已保存: %s", userinfo.get("nickname", "")[:10])
+
     response = RedirectResponse(url=redirect_url, status_code=302)
     response.set_cookie(
         key=OPENID_COOKIE,
