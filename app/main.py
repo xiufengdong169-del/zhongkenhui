@@ -86,6 +86,18 @@ def _oauth_redirect(request: Request, scope: str = "snsapi_base") -> RedirectRes
     return RedirectResponse(url=oauth_url, status_code=302)
 
 
+def _need_oauth(request: Request) -> bool:
+    """判断是否需要 OAuth 重定向（微信内且未授权且未跳过）"""
+    if not _is_wechat(request):
+        return False
+    if _read_openid(request):
+        return False
+    # noauth=1 参数可跳过 OAuth（调试或域名未配置时使用）
+    if request.query_params.get("noauth") == "1":
+        return False
+    return True
+
+
 # ==================== 健康检查 ====================
 
 
@@ -98,6 +110,39 @@ def health():
     except Exception:
         db_ok = False
     return {"ok": True, "db": db_ok, "app": "zhongkenhui-v2"}
+
+
+@app.get("/wx/debug")
+def wx_debug():
+    """诊断端点：检查配置、access_token、菜单、用户信息"""
+    import time as _time
+    info = {
+        "PUBLIC_BASE": settings.PUBLIC_BASE,
+        "WX_APPID": settings.WX_APPID,
+        "WX_APPSECRET_set": bool(settings.WX_APPSECRET),
+        "WX_TOKEN": settings.WX_TOKEN,
+        "MAIL_ENABLED": settings.MAIL_ENABLED,
+        "time": _time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    # 测试 access_token
+    token = wechat.get_access_token()
+    info["access_token_ok"] = bool(token)
+    info["access_token_prefix"] = token[:20] + "..." if token else "(empty)"
+
+    # 测试菜单
+    menu = wechat.get_menu_info()
+    info["menu"] = menu
+
+    # OAuth URL 示例
+    oauth_url = wechat.build_oauth_url(
+        redirect_uri=f"{settings.PUBLIC_BASE}/wx/oauth",
+        scope="snsapi_base",
+        state="/register",
+    )
+    info["oauth_url_example"] = oauth_url
+
+    return JSONResponse(info)
 
 
 # ==================== 微信回调 ====================
@@ -134,21 +179,22 @@ def wx_oauth_callback(
     state: str = Query(""),
 ):
     """微信 OAuth 2.0 回调：用 code 换 openid，写 Cookie，跳回目标页面"""
+    # state 是目标页面路径（如 /register），确保安全（只允许站内路径）
+    redirect_url = state if (state and state.startswith("/")) else "/"
+
     if not code:
-        logger.warning("OAuth 回调缺少 code 参数")
-        return PlainTextResponse("授权失败：缺少 code 参数")
+        logger.warning("OAuth 回调缺少 code 参数，直接跳转目标页面")
+        return RedirectResponse(url=redirect_url, status_code=302)
 
     result = wechat.exchange_code(code)
     openid = result.get("openid", "")
 
     if not openid:
-        logger.error("OAuth 回调获取 openid 失败: %s", result)
-        return PlainTextResponse("授权失败，请返回重试。")
+        logger.error("OAuth 回调获取 openid 失败: %s，直接跳转目标页面", result)
+        # OAuth 失败时仍然跳转到目标页面（不设 cookie），确保页面可访问
+        return RedirectResponse(url=redirect_url, status_code=302)
 
     logger.info("OAuth 授权成功，openid: %s...", openid[:8])
-
-    # state 是目标页面路径（如 /register），确保安全（只允许站内路径）
-    redirect_url = state if (state and state.startswith("/")) else "/"
 
     response = RedirectResponse(url=redirect_url, status_code=302)
     response.set_cookie(
@@ -169,7 +215,7 @@ def wx_oauth_callback(
 def index(request: Request):
     openid = _read_openid(request)
     # 微信内未授权时跳 OAuth
-    if _is_wechat(request) and not openid:
+    if _need_oauth(request):
         return _oauth_redirect(request)
     return templates.TemplateResponse(
         "index.html", {"request": request, "openid": openid}
@@ -179,7 +225,7 @@ def index(request: Request):
 @app.get("/about", response_class=HTMLResponse)
 def about(request: Request):
     openid = _read_openid(request)
-    if _is_wechat(request) and not openid:
+    if _need_oauth(request):
         return _oauth_redirect(request)
     return templates.TemplateResponse(
         "about.html", {"request": request, "openid": openid}
@@ -189,7 +235,7 @@ def about(request: Request):
 @app.get("/surprise", response_class=HTMLResponse)
 def surprise(request: Request):
     openid = _read_openid(request)
-    if _is_wechat(request) and not openid:
+    if _need_oauth(request):
         return _oauth_redirect(request)
     return templates.TemplateResponse(
         "surprise.html", {"request": request, "openid": openid}
@@ -199,7 +245,7 @@ def surprise(request: Request):
 @app.get("/business", response_class=HTMLResponse)
 def business(request: Request):
     openid = _read_openid(request)
-    if _is_wechat(request) and not openid:
+    if _need_oauth(request):
         return _oauth_redirect(request)
     return templates.TemplateResponse(
         "business.html", {"request": request, "openid": openid}
@@ -209,7 +255,7 @@ def business(request: Request):
 @app.get("/tech", response_class=HTMLResponse)
 def tech(request: Request):
     openid = _read_openid(request)
-    if _is_wechat(request) and not openid:
+    if _need_oauth(request):
         return _oauth_redirect(request)
     return templates.TemplateResponse(
         "tech.html", {"request": request, "openid": openid}
@@ -222,7 +268,7 @@ def tech(request: Request):
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request):
     openid = _read_openid(request)
-    if _is_wechat(request) and not openid:
+    if _need_oauth(request):
         return _oauth_redirect(request)
     return templates.TemplateResponse(
         "register.html",
@@ -271,7 +317,7 @@ def register_submit(
 @app.get("/people", response_class=HTMLResponse)
 def people_page(request: Request):
     openid = _read_openid(request)
-    if _is_wechat(request) and not openid:
+    if _need_oauth(request):
         return _oauth_redirect(request)
     return templates.TemplateResponse(
         "people.html",
@@ -319,7 +365,7 @@ def people_submit(
 @app.get("/project", response_class=HTMLResponse)
 def project_page(request: Request):
     openid = _read_openid(request)
-    if _is_wechat(request) and not openid:
+    if _need_oauth(request):
         return _oauth_redirect(request)
     return templates.TemplateResponse(
         "project.html",

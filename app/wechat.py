@@ -146,6 +146,7 @@ def get_user_info(openid: str) -> dict:
     """
     token = get_access_token()
     if not token:
+        logger.error("get_user_info 失败: access_token 为空")
         return {}
     url = (
         f"https://api.weixin.qq.com/cgi-bin/user/info"
@@ -153,6 +154,7 @@ def get_user_info(openid: str) -> dict:
     )
     try:
         resp = httpx.get(url, timeout=10).json()
+        logger.info("user/info API 返回: %s", resp)
         if resp.get("errcode"):
             logger.warning("获取用户信息失败: %s", resp)
             return {}
@@ -160,6 +162,19 @@ def get_user_info(openid: str) -> dict:
     except Exception as e:
         logger.error("获取用户信息异常: %s", e)
         return {}
+
+
+def get_menu_info() -> dict:
+    """查询当前自定义菜单配置"""
+    token = get_access_token()
+    if not token:
+        return {"error": "access_token 为空"}
+    url = f"https://api.weixin.qq.com/cgi-bin/get_current_selfmenu_info?access_token={token}"
+    try:
+        resp = httpx.get(url, timeout=10).json()
+        return resp
+    except Exception as e:
+        return {"error": str(e)}
 
 
 def _format_user_email(openid: str, user_info: dict, now: str) -> tuple:
