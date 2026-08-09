@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}项目信息{% endblock %}
+{% block header %}项目信息{% endblock %}
+{% block content %}
+{% if message %}
+<div class="alert {{ 'alert-success' if success else 'alert-error' }}">{{ message }}</div>
+{% endif %}
+
+{% if not success %}
+<div class="card">
+    <form method="post" action="/project">
+        <div class="form-group">
+            <label>项目名称 <span style="color: red;">*</span></label>
+            <input type="text" name="projectname" placeholder="请输入项目名称" required>
+        </div>
+        <div class="form-group">
+            <label>项目负责人 <span style="color: red;">*</span></label>
+            <input type="text" name="projectpeople" placeholder="请输入项目负责人姓名" required>
+        </div>
+        <div class="form-group">
+            <label>联系电话 <span style="color: red;">*</span></label>
+            <input type="tel" name="projectphone" placeholder="请输入联系电话" required maxlength="11">
+        </div>
+        <div class="form-group">
+            <label>项目描述 <span style="color: red;">*</span></label>
+            <textarea name="projectdescribe" placeholder="请详细描述项目内容、规模、合作需求等" required></textarea>
+        </div>
+        <div class="tip">提示：请务必提交真实的项目信息，若多次提交虚假信息，您的帐号将会被暂停或终止。</div>
+        <button type="submit" class="btn">提交项目</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

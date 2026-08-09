@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}注册惊喜{% endblock %}
+{% block header %}注册惊喜{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="content">
+        <h2 style="color: #6469ab; text-align: center; margin-bottom: 20px;">🎁 注册惊喜</h2>
+        <p>欢迎加入众肯会！成为我们的会员，您将享受以下专属权益：</p>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #6469ab; margin-bottom: 15px;">会员权益</h3>
+            <ul style="line-height: 2; margin-left: 1.5em;">
+                <li><strong>项目信息优先获取</strong> - 第一时间获取最新项目合作机会</li>
+                <li><strong>人才推荐服务</strong> - 免费发布人才需求或推荐</li>
+                <li><strong>业务合作对接</strong> - 优先匹配业务合作资源</li>
+                <li><strong>技术资源共享</strong> - 获取行业技术资料和支持</li>
+                <li><strong>专属客服服务</strong> - 一对一专属服务支持</li>
+            </ul>
+        </div>
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #ffeaa7;">
+            <h3 style="color: #856404; margin-bottom: 15px;">🌟 新会员专享</h3>
+            <p style="text-indent: 0;">前100名注册会员将获得：</p>
+            <ul style="line-height: 2; margin-left: 1.5em; color: #856404;">
+                <li>免费项目咨询一次</li>
+                <li>优先参与线下活动</li>
+                <li>专属会员标识</li>
+            </ul>
+        </div>
+        <p style="text-align: center; margin-top: 30px;">
+            <a href="/register" class="btn" style="display: inline-block; width: auto; padding: 15px 40px;">立即注册</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

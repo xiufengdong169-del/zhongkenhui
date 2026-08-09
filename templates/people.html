@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}推荐达人{% endblock %}
+{% block header %}推荐达人{% endblock %}
+{% block content %}
+{% if message %}
+<div class="alert {{ 'alert-success' if success else 'alert-error' }}">{{ message }}</div>
+{% endif %}
+
+{% if not success %}
+<div class="card">
+    <form method="post" action="/people">
+        <div class="form-group">
+            <label>达人姓名 <span style="color: red;">*</span></label>
+            <input type="text" name="name" placeholder="请输入达人姓名" required>
+        </div>
+        <div class="form-group">
+            <label>联系方式 <span style="color: red;">*</span></label>
+            <input type="tel" name="phone" placeholder="请输入达人联系方式" required maxlength="11">
+        </div>
+        <div class="form-group">
+            <label>达人简介 <span style="color: red;">*</span></label>
+            <textarea name="describe" placeholder="请简要介绍达人的专业领域、技能特长、工作经验等" required></textarea>
+        </div>
+        <div class="tip">提示：请务必提交真实的达人信息，若多次提交虚假信息，您的帐号将会被暂停或终止。</div>
+        <button type="submit" class="btn">提交推荐</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

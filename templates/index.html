@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}众肯会{% endblock %}
+{% block header %}众肯会{% endblock %}
+{% block content %}
+<div class="card" style="text-align: center; padding: 30px 20px;">
+    <div style="font-size: 48px; margin-bottom: 10px;">🏢</div>
+    <h2 style="color: #6469ab; margin-bottom: 10px;">众肯会</h2>
+    <p style="color: #666;">信息系统工程咨询与监理</p>
+</div>
+
+<div class="card">
+    <h3 class="section-title">关于众肯</h3>
+    <div class="menu-grid">
+        <a href="/about" class="menu-item">
+            <div class="icon">📋</div><div class="text">平台介绍</div>
+        </a>
+        <a href="/register" class="menu-item">
+            <div class="icon">📝</div><div class="text">加入众肯</div>
+        </a>
+        <a href="/surprise" class="menu-item">
+            <div class="icon">🎁</div><div class="text">注册惊喜</div>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="section-title">有偿信息</h3>
+    <div class="menu-grid">
+        <a href="/people" class="menu-item">
+            <div class="icon">👤</div><div class="text">达人推荐</div>
+        </a>
+        <a href="/project" class="menu-item">
+            <div class="icon">📁</div><div class="text">项目信息</div>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="section-title">加盟合作</h3>
+    <div class="menu-grid">
+        <a href="/business" class="menu-item">
+            <div class="icon">🤝</div><div class="text">业务合作</div>
+        </a>
+        <a href="/tech" class="menu-item">
+            <div class="icon">⚙️</div><div class="text">技术合作</div>
+        </a>
+    </div>
+</div>
+{% endblock %}
+{% block footer_btn %}{% endblock %}
