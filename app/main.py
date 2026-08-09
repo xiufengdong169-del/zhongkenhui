@@ -47,6 +47,14 @@ _static_dir = BASE_DIR / "static"
 _static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
+# 微信网页授权域名验证文件
+MP_VERIFY_CONTENT = "m7HAt76X86EQ8d3M"
+
+@app.get("/MP_verify_m7HAt76X86EQ8d3M.txt", response_class=PlainTextResponse)
+def mp_verify():
+    """微信网页授权域名验证文件"""
+    return PlainTextResponse(MP_VERIFY_CONTENT, media_type="text/plain")
+
 PHONE_RE = re.compile(r"^1[3-9]\d{9}$")
 
 # Cookie 名
