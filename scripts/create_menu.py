@@ -20,17 +20,17 @@ MENU = {
         {
             "name": "关于众肯",
             "sub_button": [
-                {"type": "view", "name": "平台介绍", "url": f"{BASE}/about"},
-                {"type": "view", "name": "加入众肯", "url": f"{BASE}/register"},
-                {"type": "view", "name": "注册惊喜", "url": f"{BASE}/surprise"},
+                {"type": "view", "name": "我们是谁", "url": f"{BASE}/about"},
+                {"type": "view", "name": "加入我们", "url": f"{BASE}/register"},
+                {"type": "view", "name": "会员权益", "url": f"{BASE}/surprise"},
                 {"type": "click", "name": "联系客服", "key": "CONTACT_CS"},
             ],
         },
         {
             "name": "有偿信息",
             "sub_button": [
-                {"type": "view", "name": "达人推荐", "url": f"{BASE}/people"},
-                {"type": "view", "name": "项目信息", "url": f"{BASE}/project"},
+                {"type": "view", "name": "人才推荐", "url": f"{BASE}/people"},
+                {"type": "view", "name": "项目机会", "url": f"{BASE}/project"},
             ],
         },
         {
